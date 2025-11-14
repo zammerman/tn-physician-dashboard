@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennessee Physician Specialty Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: transparent;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+        
+        .dropdown-container {
+            margin-bottom: 30px;
+        }
+        
+        .dropdown-label {
+            color: #b257a1;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px 15px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            border: 2px solid #b257a1;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #05335d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        select:hover {
+            background: rgba(255, 255, 255, 1);
+            border-color: #a4d6f3;
+        }
+        
+        .metrics-top {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+            margin-bottom: 25px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        
+        .metric-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid rgba(164, 214, 243, 0.2);
+        }
+        
+        .metric-title {
+            color: #b257a1;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+        
+        .big-number {
+            color: #fbae1a;
+            font-weight: 700;
+            font-size: 48px;
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .stacked-bar-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .stacked-bar {
+            width: 100%;
+            height: 40px;
+            display: flex;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .bar-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all 0.5s ease;
+        }
+        
+        .bar-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #a4d6f3;
+        }
+        
+        .comparison-container {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .bar-wrapper {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .simple-bar {
+            width: 100%;
+            background: #fbae1a;
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: #05335d;
+            font-weight: 700;
+            font-size: 18px;
+            padding-top: 10px;
+            transition: height 0.5s ease;
+            margin-top: auto;
+        }
+        
+        .bar-label {
+            margin-top: 8px;
+            color: #a4d6f3;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .no-data {
+            color: #a4d6f3;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-top {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .big-number {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dropdown-container">
+            <label class="dropdown-label" for="specialtySelect">Select Physician Specialty</label>
+            <select id="specialtySelect">
+                <option value="">Choose a specialty...</option>
+            </select>
+        </div>
+        
+        <div id="metricsTop" class="metrics-top" style="display: none;">
+            <!-- TN Number -->
+            <div class="metric-card">
+                <div class="metric-title" id="tnNumberTitle">Number of Physicians in Tennessee</div>
+                <div class="big-number" id="tnNumber">-</div>
+            </div>
+            
+            <!-- TN Share -->
+            <div class="metric-card">
+                <div class="metric-title">Share of the Health Workforce in Tennessee</div>
+                <div class="stacked-bar-container" style="position: relative;">
+                    <div class="stacked-bar">
+                        <div class="bar-segment" id="tnShareBar" style="background: #fbae1a;"></div>
+                        <div class="bar-segment" id="tnShareRemainder" style="background: #375873;"></div>
+                    </div>
+                    <div id="tnSharePercent" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: #fbae1a; font-weight: 700; font-size: 14px;"></div>
+                </div>
+                <div class="bar-labels">
+                    <span id="specialtyLabel">Specialty</span>
+                    <span>Other Specialties</span>
+                </div>
+            </div>
+        </div>
+        
+        <div id="metricsContainer" class="metrics-grid" style="display: none;">
+            
+            <!-- Per 100K Comparison -->
+            <div class="metric-card">
+                <div class="metric-title" id="per100kTitle">Physicians per 100K Population</div>
+                <div class="comparison-container" style="height: 150px;">
+                    <div class="bar-wrapper" style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
+                        <div class="simple-bar" id="tnPer100kBar" style="background: #b257a1;">-</div>
+                        <div class="bar-label">Tennessee</div>
+                    </div>
+                    <div class="bar-wrapper" style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
+                        <div class="simple-bar" id="usPer100kBar" style="background: #fbae1a;">-</div>
+                        <div class="bar-label">United States</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Under 40 -->
+            <div class="metric-card">
+                <div class="metric-title" id="under40Title">Percent Under 40</div>
+                <div id="under40Content"></div>
+            </div>
+            
+            <!-- Over 65 -->
+            <div class="metric-card">
+                <div class="metric-title" id="over65Title">Percent Over 65</div>
+                <div id="over65Content"></div>
+            </div>
+            
+            <!-- Women -->
+            <div class="metric-card">
+                <div class="metric-title" id="womenTitle">Percent Women</div>
+                <div id="womenContent"></div>
+            </div>
+            
+            <!-- Nonwhite -->
+            <div class="metric-card">
+                <div class="metric-title" id="nonwhiteTitle">Percent Nonwhite</div>
+                <div id="nonwhiteContent"></div>
+            </div>
+            
+            <!-- International Medical Graduates -->
+            <div class="metric-card">
+                <div class="metric-title" id="imgTitle">Percent International Medical Graduates</div>
+                <div id="imgContent"></div>
+            </div>
+            
+            <!-- Hospital Practice -->
+            <div class="metric-card">
+                <div class="metric-title" id="hospTitle">Percent with Full-time Hospital Practice</div>
+                <div id="hospContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Embedded data
+        const specialtyData = [
+            {
+                specialty: "Anesthesiology",
+                tnNumber: 787,
+                tnShare: 4.2,
+                tnPer100k: 11,
+                usPer100k: 14,
+                tnUnder40: 12.8,
+                usUnder40: 13.2,
+                tnOver65: 29.4,
+                usOver65: 26.3,
+                tnWomen: 24.4,
+                usWomen: 28.7,
+                tnNonwhite: 21.9,
+                usNonwhite: 37.3,
+                tnIntl: 10.1,
+                usIntl: 19.9,
+                tnHosp: 17.5,
+                usHosp: 21.4
+            },
+            {
+                specialty: "Cardiology",
+                tnNumber: 720,
+                tnShare: 3.8,
+                tnPer100k: 10,
+                usPer100k: 11,
+                tnUnder40: 9.6,
+                usUnder40: 8.7,
+                tnOver65: 24.9,
+                usOver65: 27.2,
+                tnWomen: 14.1,
+                usWomen: 17.6,
+                tnNonwhite: 38.3,
+                usNonwhite: 48.7,
+                tnIntl: 28.3,
+                usIntl: 34.2,
+                tnHosp: 13.7,
+                usHosp: 13.4
+            },
+            {
+                specialty: "Critical Care Medicine",
+                tnNumber: 408,
+                tnShare: 2.2,
+                tnPer100k: 6,
+                usPer100k: 6,
+                tnUnder40: 23.7,
+                usUnder40: 23.0,
+                tnOver65: 5.0,
+                usOver65: 6.2,
+                tnWomen: 30.8,
+                usWomen: 31.8,
+                tnNonwhite: 33.7,
+                usNonwhite: 47.3,
+                tnIntl: 34.3,
+                usIntl: 38.7,
+                tnHosp: 14.9,
+                usHosp: 20.3
+            },
+            {
+                specialty: "Emergency Medicine",
+                tnNumber: 818,
+                tnShare: 4.3,
+                tnPer100k: 12,
+                usPer100k: 15,
+                tnUnder40: 24.0,
+                usUnder40: 24.0,
+                tnOver65: 20.0,
+                usOver65: 17.0,
+                tnWomen: 25.0,
+                usWomen: 30.0,
+                tnNonwhite: 20.0,
+                usNonwhite: 30.0,
+                tnIntl: 6.0,
+                usIntl: 7.0,
+                tnHosp: 32.9,
+                usHosp: 32.8
+            },
+            {
+                specialty: "Endocrinology",
+                tnNumber: 136,
+                tnShare: 0.7,
+                tnPer100k: 2,
+                usPer100k: 3,
+                tnUnder40: 13.0,
+                usUnder40: 18.0,
+                tnOver65: 22.0,
+                usOver65: 23.0,
+                tnWomen: 49.0,
+                usWomen: 55.0,
+                tnNonwhite: 46.0,
+                usNonwhite: 55.0,
+                tnIntl: 37.0,
+                usIntl: 45.0,
+                tnHosp: null,
+                usHosp: 9.3
+            },
+            {
+                specialty: "ENT",
+                tnNumber: 185,
+                tnShare: 1.0,
+                tnPer100k: 3,
+                usPer100k: 3,
+                tnUnder40: 19.0,
+                usUnder40: 15.0,
+                tnOver65: 25.0,
+                usOver65: 24.4,
+                tnWomen: 12.0,
+                usWomen: 21.0,
+                tnNonwhite: 20.0,
+                usNonwhite: 32.0,
+                tnIntl: 3.0,
+                usIntl: 5.0,
+                tnHosp: 6.5,
+                usHosp: 9.9
+            },
+            {
+                specialty: "Family Medicine",
+                tnNumber: 2272,
+                tnShare: 12.1,
+                tnPer100k: 32,
+                usPer100k: 37,
+                tnUnder40: 15.0,
+                usUnder40: 16.0,
+                tnOver65: 29.0,
+                usOver65: 25.0,
+                tnWomen: 35.0,
+                usWomen: 44.0,
+                tnNonwhite: 30.0,
+                usNonwhite: 42.0,
+                tnIntl: 20.0,
+                usIntl: 26.0,
+                tnHosp: 8.1,
+                usHosp: 8.8
+            },
+            {
+                specialty: "Gastroenterology",
+                tnNumber: 311,
+                tnShare: 1.7,
+                tnPer100k: 4,
+                usPer100k: 5,
+                tnUnder40: 12.0,
+                usUnder40: 14.0,
+                tnOver65: 28.0,
+                usOver65: 27.0,
+                tnWomen: 16.0,
+                usWomen: 21.0,
+                tnNonwhite: 39.0,
+                usNonwhite: 51.0,
+                tnIntl: 22.0,
+                usIntl: 30.0,
+                tnHosp: 8.4,
+                usHosp: 8.9
+            },
+            {
+                specialty: "General Surgery",
+                tnNumber: 762,
+                tnShare: 4.1,
+                tnPer100k: 10,
+                usPer100k: 10,
+                tnUnder40: 12.8,
+                usUnder40: 13.1,
+                tnOver65: 27.9,
+                usOver65: 19.5,
+                tnWomen: 20.4,
+                usWomen: 24.1,
+                tnNonwhite: 22.5,
+                usNonwhite: 38.4,
+                tnIntl: 7.6,
+                usIntl: 18.6,
+                tnHosp: 14.1,
+                usHosp: 17.5
+            },
+            {
+                specialty: "Geriatric Medicine",
+                tnNumber: 61,
+                tnShare: 0.3,
+                tnPer100k: 1,
+                usPer100k: 2,
+                tnUnder40: 18.0,
+                usUnder40: 15.0,
+                tnOver65: 15.0,
+                usOver65: 17.0,
+                tnWomen: 56.0,
+                usWomen: 56.0,
+                tnNonwhite: 56.0,
+                usNonwhite: 60.0,
+                tnIntl: 51.0,
+                usIntl: 52.0,
+                tnHosp: null,
+                usHosp: 14.5
+            },
+            {
+                specialty: "Hematology/Oncology",
+                tnNumber: 475,
+                tnShare: 2.5,
+                tnPer100k: 7,
+                usPer100k: 6,
+                tnUnder40: 15.0,
+                usUnder40: 14.8,
+                tnOver65: 16.0,
+                usOver65: 21.5,
+                tnWomen: 40.7,
+                usWomen: 39.6,
+                tnNonwhite: 40.5,
+                usNonwhite: 47.7,
+                tnIntl: 29.3,
+                usIntl: 36.7,
+                tnHosp: 15.1,
+                usHosp: 17.6
+            },
+            {
+                specialty: "Infectious Diseases",
+                tnNumber: 182,
+                tnShare: 1.0,
+                tnPer100k: 3,
+                usPer100k: 3,
+                tnUnder40: 15.0,
+                usUnder40: 14.0,
+                tnOver65: 26.0,
+                usOver65: 23.0,
+                tnWomen: 41.0,
+                usWomen: 44.0,
+                tnNonwhite: 32.0,
+                usNonwhite: 48.0,
+                tnIntl: 28.0,
+                usIntl: 37.0,
+                tnHosp: 16.5,
+                usHosp: 14.4
+            },
+            {
+                specialty: "Internal Medicine",
+                tnNumber: 2381,
+                tnShare: 12.7,
+                tnPer100k: 34,
+                usPer100k: 39,
+                tnUnder40: 15.6,
+                usUnder40: 17.6,
+                tnOver65: 25.4,
+                usOver65: 24.4,
+                tnWomen: 34.6,
+                usWomen: 40.6,
+                tnNonwhite: 41.4,
+                usNonwhite: 55.6,
+                tnIntl: 26.4,
+                usIntl: 40.6,
+                tnHosp: 17.4,
+                usHosp: 14.9
+            },
+            {
+                specialty: "Internal Medicine/Pediatrics",
+                tnNumber: 253,
+                tnShare: 1.3,
+                tnPer100k: 4,
+                usPer100k: 2,
+                tnUnder40: 25.0,
+                usUnder40: 24.0,
+                tnOver65: 4.3,
+                usOver65: 3.1,
+                tnWomen: 48.0,
+                usWomen: 54.0,
+                tnNonwhite: 26.0,
+                usNonwhite: 35.0,
+                tnIntl: 5.0,
+                usIntl: 10.0,
+                tnHosp: 9.9,
+                usHosp: 14.1
+            },
+            {
+                specialty: "Nephrology",
+                tnNumber: 241,
+                tnShare: 1.3,
+                tnPer100k: 3,
+                usPer100k: 4,
+                tnUnder40: 14.0,
+                usUnder40: 12.0,
+                tnOver65: 23.0,
+                usOver65: 20.0,
+                tnWomen: 30.0,
+                usWomen: 30.0,
+                tnNonwhite: 55.0,
+                usNonwhite: 63.0,
+                tnIntl: 47.0,
+                usIntl: 53.0,
+                tnHosp: 5.8,
+                usHosp: 9.3
+            },
+            {
+                specialty: "Neurology",
+                tnNumber: 477,
+                tnShare: 2.5,
+                tnPer100k: 9,
+                usPer100k: 9,
+                tnUnder40: 11.9,
+                usUnder40: 14.8,
+                tnOver65: 19.8,
+                usOver65: 22.7,
+                tnWomen: 25.8,
+                usWomen: 27.4,
+                tnNonwhite: 33.2,
+                usNonwhite: 42.1,
+                tnIntl: 19.4,
+                usIntl: 25.3,
+                tnHosp: 14.5,
+                usHosp: 13.3
+            },
+            {
+                specialty: "OB/GYN",
+                tnNumber: 867,
+                tnShare: 4.6,
+                tnPer100k: 12,
+                usPer100k: 13,
+                tnUnder40: 14.0,
+                usUnder40: 15.0,
+                tnOver65: 26.0,
+                usOver65: 24.0,
+                tnWomen: 58.0,
+                usWomen: 63.0,
+                tnNonwhite: 27.0,
+                usNonwhite: 39.0,
+                tnIntl: 6.0,
+                usIntl: 14.0,
+                tnHosp: 5.8,
+                usHosp: 9.0
+            },
+            {
+                specialty: "Ophthalmology",
+                tnNumber: 367,
+                tnShare: 2.0,
+                tnPer100k: 5,
+                usPer100k: 6,
+                tnUnder40: 21.0,
+                usUnder40: 15.0,
+                tnOver65: 30.0,
+                usOver65: 29.0,
+                tnWomen: 24.0,
+                usWomen: 29.0,
+                tnNonwhite: 20.0,
+                usNonwhite: 39.0,
+                tnIntl: 3.0,
+                usIntl: 7.0,
+                tnHosp: 3.3,
+                usHosp: 6.0
+            },
+            {
+                specialty: "Orthopedics",
+                tnNumber: 487,
+                tnShare: 2.6,
+                tnPer100k: 7,
+                usPer100k: 7,
+                tnUnder40: 13.6,
+                usUnder40: 9.3,
+                tnOver65: 23.6,
+                usOver65: 27.1,
+                tnWomen: 4.6,
+                usWomen: 7.2,
+                tnNonwhite: 12.6,
+                usNonwhite: 25.4,
+                tnIntl: 1.7,
+                usIntl: 5.7,
+                tnHosp: 4.7,
+                usHosp: 7.9
+            },
+            {
+                specialty: "Pediatric Medicine",
+                tnNumber: 1242,
+                tnShare: 6.6,
+                tnPer100k: 18,
+                usPer100k: 21,
+                tnUnder40: 17.4,
+                usUnder40: 16.0,
+                tnOver65: 19.6,
+                usOver65: 24.0,
+                tnWomen: 61.6,
+                usWomen: 65.1,
+                tnNonwhite: 26.0,
+                usNonwhite: 44.3,
+                tnIntl: 12.7,
+                usIntl: 25.2,
+                tnHosp: 15.0,
+                usHosp: 18.8
+            },
+            {
+                specialty: "Psychiatry",
+                tnNumber: 725,
+                tnShare: 3.9,
+                tnPer100k: 10,
+                usPer100k: 15,
+                tnUnder40: 14.9,
+                usUnder40: 10.2,
+                tnOver65: 32.7,
+                usOver65: 29.1,
+                tnWomen: 42.3,
+                usWomen: 45.0,
+                tnNonwhite: 40.2,
+                usNonwhite: 46.9,
+                tnIntl: 25.4,
+                usIntl: 30.2,
+                tnHosp: 16.2,
+                usHosp: 14.5
+            },
+            {
+                specialty: "Pulmonology",
+                tnNumber: 97,
+                tnShare: 0.5,
+                tnPer100k: 1,
+                usPer100k: 1,
+                tnUnder40: 0.0,
+                usUnder40: 0.0,
+                tnOver65: 21.0,
+                usOver65: 30.0,
+                tnWomen: 10.0,
+                usWomen: 13.0,
+                tnNonwhite: 29.0,
+                usNonwhite: 45.0,
+                tnIntl: 25.0,
+                usIntl: 33.0,
+                tnHosp: 15.5,
+                usHosp: 16.0
+            },
+            {
+                specialty: "Radiology",
+                tnNumber: 824,
+                tnShare: 4.4,
+                tnPer100k: 21,
+                usPer100k: 21,
+                tnUnder40: 10.0,
+                usUnder40: 7.3,
+                tnOver65: 29.6,
+                usOver65: 18.7,
+                tnWomen: 20.3,
+                usWomen: 26.9,
+                tnNonwhite: 20.1,
+                usNonwhite: 34.5,
+                tnIntl: 3.5,
+                usIntl: 11.4,
+                tnHosp: 19.0,
+                usHosp: 19.8
+            },
+            {
+                specialty: "Rheumatology",
+                tnNumber: 109,
+                tnShare: 0.6,
+                tnPer100k: 2,
+                usPer100k: 2,
+                tnUnder40: 15.0,
+                usUnder40: 17.0,
+                tnOver65: 26.0,
+                usOver65: 26.0,
+                tnWomen: 45.0,
+                usWomen: 49.0,
+                tnNonwhite: 36.0,
+                usNonwhite: 50.0,
+                tnIntl: 31.0,
+                usIntl: 37.0,
+                tnHosp: null,
+                usHosp: 9.2
+            },
+            {
+                specialty: "Urology",
+                tnNumber: 242,
+                tnShare: 1.3,
+                tnPer100k: 3,
+                usPer100k: 3,
+                tnUnder40: 15.0,
+                usUnder40: 15.0,
+                tnOver65: 31.0,
+                usOver65: 27.0,
+                tnWomen: 12.0,
+                usWomen: 12.0,
+                tnNonwhite: 18.0,
+                usNonwhite: 34.0,
+                tnIntl: 3.0,
+                usIntl: 10.0,
+                tnHosp: 5.8,
+                usHosp: 10.1
+            }
+        ];
+
+        // Initialize dropdown
+        const select = document.getElementById('specialtySelect');
+        specialtyData.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.specialty;
+            option.textContent = item.specialty;
+            select.appendChild(option);
+        });
+
+        // Create stacked bar for percentage metrics
+        function createStackedBar(tnValue, usValue, containerId) {
+            if (tnValue === null || tnValue === undefined) {
+                document.getElementById(containerId).innerHTML = '<div class="no-data">No data available for Tennessee</div>';
+                return;
+            }
+            
+            const html = `
+                <div style="margin-bottom: 15px;">
+                    <div class="stacked-bar-container">
+                        <div class="stacked-bar">
+                            <div class="bar-segment" style="background: #b257a1; width: ${tnValue}%;">${tnValue}%</div>
+                            <div class="bar-segment" style="background: #375873; width: ${100-tnValue}%;"></div>
+                        </div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>Tennessee: ${tnValue}%</span>
+                    </div>
+                </div>
+                ${usValue !== null && usValue !== undefined ? `
+                <div>
+                    <div class="stacked-bar-container">
+                        <div class="stacked-bar">
+                            <div class="bar-segment" style="background: #fbae1a; width: ${usValue}%;">${usValue}%</div>
+                            <div class="bar-segment" style="background: #375873; width: ${100-usValue}%;"></div>
+                        </div>
+                    </div>
+                    <div class="bar-labels">
+                        <span>United States: ${usValue}%</span>
+                    </div>
+                </div>` : '<div class="no-data">No data available for United States</div>'}
+            `;
+            document.getElementById(containerId).innerHTML = html;
+        }
+
+        // Update display when specialty is selected
+        select.addEventListener('change', function() {
+            const selectedSpecialty = this.value;
+            
+            if (!selectedSpecialty) {
+                document.getElementById('metricsTop').style.display = 'none';
+                document.getElementById('metricsContainer').style.display = 'none';
+                return;
+            }
+            
+            const data = specialtyData.find(item => item.specialty === selectedSpecialty);
+            document.getElementById('metricsTop').style.display = 'grid';
+            document.getElementById('metricsContainer').style.display = 'grid';
+            
+            // Update titles with specialty name
+            const specialtyPlural = selectedSpecialty === "Pediatric Medicine" ? "Pediatricians" :
+                                   selectedSpecialty === "Psychiatry" ? "Psychiatrists" :
+                                   selectedSpecialty === "Family Medicine" ? "Family Medicine Physicians" :
+                                   selectedSpecialty === "Internal Medicine" ? "Internal Medicine Physicians" :
+                                   selectedSpecialty === "Emergency Medicine" ? "Emergency Medicine Physicians" :
+                                   selectedSpecialty === "Critical Care Medicine" ? "Critical Care Medicine Physicians" :
+                                   selectedSpecialty === "Internal Medicine/Pediatrics" ? "Internal Medicine/Pediatrics Physicians" :
+                                   selectedSpecialty === "Geriatric Medicine" ? "Geriatric Medicine Physicians" :
+                                   selectedSpecialty.endsWith('y') ? selectedSpecialty.slice(0, -1) + 'ists' :
+                                   selectedSpecialty + ' Physicians';
+            
+            document.getElementById('tnNumberTitle').textContent = `Number of ${specialtyPlural} in Tennessee`;
+            document.getElementById('per100kTitle').textContent = `${specialtyPlural} per 100K Population`;
+            document.getElementById('under40Title').textContent = `Percent of ${specialtyPlural} Under 40`;
+            document.getElementById('over65Title').textContent = `Percent of ${specialtyPlural} Over 65`;
+            document.getElementById('womenTitle').textContent = `Percent of ${specialtyPlural} Women`;
+            document.getElementById('nonwhiteTitle').textContent = `Percent of ${specialtyPlural} Nonwhite`;
+            document.getElementById('imgTitle').textContent = `Percent of ${specialtyPlural} Intl. Med. Graduate`;
+            document.getElementById('hospTitle').textContent = `Percent of ${specialtyPlural} with Full-time Hospital Practice`;
+            
+            // Update TN Number
+            document.getElementById('tnNumber').textContent = data.tnNumber.toLocaleString();
+            
+            // Update TN Share
+            const sharePercent = data.tnShare;
+            document.getElementById('tnShareBar').style.width = sharePercent + '%';
+            document.getElementById('tnShareBar').innerHTML = '';  // Clear the inner text
+            document.getElementById('tnShareRemainder').style.width = (100 - sharePercent) + '%';
+            // Position the percentage text outside the bar
+            const percentElement = document.getElementById('tnSharePercent');
+            percentElement.textContent = sharePercent + '%';
+            percentElement.style.left = `calc(${sharePercent}% + 5px)`;
+            document.getElementById('specialtyLabel').textContent = selectedSpecialty;
+            
+            // Update Per 100K bars
+            const maxPer100k = Math.max(data.tnPer100k, data.usPer100k);
+            const tnHeight = (data.tnPer100k / maxPer100k) * 100;
+            const usHeight = (data.usPer100k / maxPer100k) * 100;
+            
+            document.getElementById('tnPer100kBar').style.height = tnHeight + 'px';
+            document.getElementById('tnPer100kBar').textContent = data.tnPer100k;
+            document.getElementById('usPer100kBar').style.height = usHeight + 'px';
+            document.getElementById('usPer100kBar').textContent = data.usPer100k;
+            
+            // Update percentage metrics
+            createStackedBar(data.tnUnder40, data.usUnder40, 'under40Content');
+            createStackedBar(data.tnOver65, data.usOver65, 'over65Content');
+            createStackedBar(data.tnWomen, data.usWomen, 'womenContent');
+            createStackedBar(data.tnNonwhite, data.usNonwhite, 'nonwhiteContent');
+            createStackedBar(data.tnIntl, data.usIntl, 'imgContent');
+            createStackedBar(data.tnHosp, data.usHosp, 'hospContent');
+        });
+    </script>
+</body>
+</html>
